@@ -1,7 +1,6 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
-import { auth, handleRedirectResult } from "@/lib/firebase";
-import { apiRequest } from "@/lib/queryClient";
+import { auth } from "@/lib/firebase";
 import { User } from "@shared/schema";
 
 interface AuthContextType {
@@ -19,26 +18,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Handle redirect result on page load
-    const handleRedirect = async () => {
-      try {
-        const result = await handleRedirectResult();
-        if (result?.user) {
-          await createOrUpdateUser(result.user);
-        }
-      } catch (error) {
-        console.error("Redirect result error:", error);
-      }
-    };
-
-    handleRedirect();
+    let isMounted = true;
 
     // Listen for auth state changes
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (!isMounted) return;
+      
+      console.log("Auth state changed:", firebaseUser?.email || "signed out");
       setFirebaseUser(firebaseUser);
       
       if (firebaseUser) {
-        await createOrUpdateUser(firebaseUser);
+        try {
+          await createOrUpdateUser(firebaseUser);
+        } catch (error) {
+          console.error("Failed to create/update user:", error);
+        }
       } else {
         setUser(null);
       }
@@ -46,20 +40,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      isMounted = false;
+      unsubscribe();
+    };
   }, []);
 
   const createOrUpdateUser = async (firebaseUser: FirebaseUser) => {
     try {
-      const response = await apiRequest("POST", "/api/auth/signin", {
-        firebaseUid: firebaseUser.uid,
-        email: firebaseUser.email,
-        displayName: firebaseUser.displayName,
-        photoURL: firebaseUser.photoURL,
+      console.log("Creating/updating user:", firebaseUser.email);
+      const token = await firebaseUser.getIdToken();
+      
+      const response = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          firebaseUid: firebaseUser.uid,
+          email: firebaseUser.email,
+          displayName: firebaseUser.displayName,
+          photoURL: firebaseUser.photoURL,
+        }),
       });
+      
+      if (!response.ok) {
+        throw new Error(`Auth failed: ${response.status}`);
+      }
       
       const data = await response.json();
       setUser(data.user);
+      console.log("User authenticated successfully:", data.user.email);
     } catch (error) {
       console.error("Failed to create/update user:", error);
     }

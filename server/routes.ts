@@ -10,7 +10,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { firebaseUid, email, displayName, photoURL } = req.body;
       
+      console.log("Auth signin request:", { firebaseUid, email, displayName });
+      
       if (!firebaseUid || !email || !displayName) {
+        console.error("Missing required auth fields");
         return res.status(400).json({ message: "Missing required fields" });
       }
 
@@ -18,6 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let user = await storage.getUserByFirebaseUid(firebaseUid);
       
       if (!user) {
+        console.log("Creating new user:", email);
         // Create new user
         user = await storage.createUser({
           firebaseUid,
@@ -26,6 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           photoURL: photoURL || null,
         });
       } else {
+        console.log("Updating existing user:", email);
         // Update user info
         user = await storage.updateUser(user.id, {
           displayName,
@@ -33,6 +38,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("Auth successful for user:", user?.email);
       res.json({ user });
     } catch (error) {
       console.error("Auth error:", error);

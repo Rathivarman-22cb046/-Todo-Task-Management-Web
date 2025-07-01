@@ -1,5 +1,5 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, signInWithRedirect, GoogleAuthProvider, getRedirectResult, signOut, type User } from "firebase/auth";
+import { getAuth, signInWithPopup, GoogleAuthProvider, signOut, type User } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "demo-api-key",
@@ -17,11 +17,7 @@ provider.addScope('email');
 provider.addScope('profile');
 
 export const signInWithGoogle = () => {
-  return signInWithRedirect(auth, provider);
-};
-
-export const handleRedirectResult = () => {
-  return getRedirectResult(auth);
+  return signInWithPopup(auth, provider);
 };
 
 export const signOutUser = () => {
