@@ -79,13 +79,10 @@ export function TaskModal({ open, onClose, task }: TaskModalProps) {
 
   const createTaskMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
-      const token = await firebaseUser?.getIdToken();
       return apiRequest("POST", "/api/tasks", {
         ...data,
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
         sharedEmails,
-      }, {
-        'Authorization': `Bearer ${token}`,
       });
     },
     onSuccess: () => {
@@ -108,12 +105,9 @@ export function TaskModal({ open, onClose, task }: TaskModalProps) {
 
   const updateTaskMutation = useMutation({
     mutationFn: async (data: TaskFormData) => {
-      const token = await firebaseUser?.getIdToken();
       return apiRequest("PUT", `/api/tasks/${task!.id}`, {
         ...data,
         dueDate: data.dueDate ? new Date(data.dueDate).toISOString() : null,
-      }, {
-        'Authorization': `Bearer ${token}`,
       });
     },
     onSuccess: () => {
@@ -248,14 +242,14 @@ export function TaskModal({ open, onClose, task }: TaskModalProps) {
             <div>
               <Label htmlFor="team">Team</Label>
               <Select
-                value={form.watch("teamId")?.toString() || ""}
-                onValueChange={(value) => form.setValue("teamId", value ? parseInt(value) : undefined)}
+                value={form.watch("teamId") ? form.watch("teamId")?.toString() : "0"}
+                onValueChange={(value) => form.setValue("teamId", value === "0" ? undefined : parseInt(value))}
               >
                 <SelectTrigger className="mt-2">
                   <SelectValue placeholder="Personal Task" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Personal Task</SelectItem>
+                  <SelectItem value="0">Personal Task</SelectItem>
                   {teams.map((team) => (
                     <SelectItem key={team.id} value={team.id.toString()}>
                       {team.name}
