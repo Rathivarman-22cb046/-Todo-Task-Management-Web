@@ -1,4 +1,5 @@
 import { pgTable, text, serial, integer, boolean, timestamp, varchar } from "drizzle-orm/pg-core";
+import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -98,3 +99,58 @@ export type UserStats = {
   dueTodayTasks: number;
   overdueTasks: number;
 };
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  tasks: many(tasks),
+  taskShares: many(taskShares),
+  teams: many(teams),
+  teamMemberships: many(teamMembers),
+}));
+
+export const tasksRelations = relations(tasks, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [tasks.createdBy],
+    references: [users.id],
+  }),
+  team: one(teams, {
+    fields: [tasks.teamId],
+    references: [teams.id],
+  }),
+  shares: many(taskShares),
+}));
+
+export const taskSharesRelations = relations(taskShares, ({ one }) => ({
+  task: one(tasks, {
+    fields: [taskShares.taskId],
+    references: [tasks.id],
+  }),
+  sharedWithUser: one(users, {
+    fields: [taskShares.sharedWithUserId],
+    references: [users.id],
+  }),
+  sharedByUser: one(users, {
+    fields: [taskShares.sharedByUserId],
+    references: [users.id],
+  }),
+}));
+
+export const teamsRelations = relations(teams, ({ one, many }) => ({
+  createdBy: one(users, {
+    fields: [teams.createdBy],
+    references: [users.id],
+  }),
+  tasks: many(tasks),
+  members: many(teamMembers),
+}));
+
+export const teamMembersRelations = relations(teamMembers, ({ one }) => ({
+  team: one(teams, {
+    fields: [teamMembers.teamId],
+    references: [teams.id],
+  }),
+  user: one(users, {
+    fields: [teamMembers.userId],
+    references: [users.id],
+  }),
+}));
